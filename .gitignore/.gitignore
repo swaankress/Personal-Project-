@@ -1,0 +1,141 @@
+{
+  @IBOutlet weak var textView: UITextView!
+  
+   let host = "172.25.12.2"
+   let port = 20023
+   var client: TCPClient?
+
+   override func viewDidLoad()
+   {
+     super.viewDidLoad()
+     client = TCPClient(address: host, port: Int32(port))
+   }
+    
+  
+   @IBAction func sendButtonAction()
+   {
+      guard let client = client
+      else
+      {
+          return
+      }
+      switch client.connect(timeout: 10)
+      {
+          case .success:
+               //appendToTextField(string: "Connected to host \(client.address)")
+               usleep(30000)
+               if let response = readResponse(from: client)
+               {
+                  appendToTextField(string: "\(response)")
+                  for _ in 0..<20
+                  {
+                    let response1 = sendRequest(string: "noop\n", using: client)
+                    appendToTextField(string: "\(response1 ?? "error-nil")")
+                    usleep(10000)
+                    if ((response1?.compare("200 OK.")) != nil)
+                    {
+                       break
+                    }
+                  }
+                  let response2 = sendRequest(string: "login\n", using: client)
+                  appendToTextField(string: "\(response2 ?? "error-nil")")
+                  usleep(30000)
+                  let response3 = sendRequest(string: "project load kress\n", using: client)
+                  appendToTextField(string: "\(response3 ?? "error-nil")")
+                  usleep(30000)
+                  let response4 = sendRequest(string: "project use kress\n", using: client)
+                  appendToTextField(string: "\(response4 ?? "error-nil")")
+                  usleep(30000)
+                  let response5 = sendRequest(string: "net open 254\n", using: client)
+                  appendToTextField(string: "\(response5 ?? "error-nil")")
+                  usleep(30000)
+                  let response6 = sendRequest(string: "ramp 254/56/17 255 8s\n", using: client)
+                  appendToTextField(string: "\(response6 ?? "error-nil")")
+               }
+               client.close();
+          case .failure(let error):
+               appendToTextField(string: String(describing: error))
+      }
+   }
+  
+  private func sendRequest(string: String, using client: TCPClient) -> String?
+  {
+     switch client.send(string: string)
+     {
+        case .success:
+           return readResponse(from: client)
+        case .failure(let error):
+           appendToTextField(string: String(describing: error))
+           return nil
+     }
+  }
+  
+  private func readResponse(from client: TCPClient) -> String?
+  {
+     guard let response = client.read(1024*10)
+     else
+     {
+        return nil
+     }
+     return String(bytes: response, encoding: .utf8)
+  }
+  
+  private func appendToTextField(string: String)
+  {
+    if  !string.hasPrefix("200") &&
+        !string.hasPrefix("201") &&
+        !string.hasPrefix("210") &&
+        !string.hasPrefix("error-nil")
+     {
+        print(string)
+        textView.text = textView.text.appending("\n\(string)")
+     }
+  }
+
+ 
+   @IBAction func offButton(_ sender: Any)
+   {
+      guard let client = client
+      else
+      {
+         return
+      }
+      switch client.connect(timeout: 10)
+      {
+         case .success:
+            usleep(30000)
+            if let response = readResponse(from: client)
+            {
+               appendToTextField(string: "\(response)")
+               for _ in 0..<20
+               {
+                  let response1 = sendRequest(string: "noop\n", using: client)
+                  appendToTextField(string: "\(response1 ?? "error-nil")")
+                  usleep(10000)
+                if ((response1?.compare("200 OK.")) != nil)
+
+                  {
+                     break
+                  }
+               }
+               let response2 = sendRequest(string: "login\n", using: client)
+               appendToTextField(string: "\(response2 ?? "error-nil")")
+               usleep(30000)
+               let response3 = sendRequest(string: "project load kress\n", using: client)
+               appendToTextField(string: "\(response3 ?? "error-nil")")
+               usleep(30000)
+               let response4 = sendRequest(string: "project use kress\n", using: client)
+               appendToTextField(string: "\(response4 ?? "error-nil")")
+               usleep(30000)
+               let response5 = sendRequest(string: "net open 254\n", using: client)
+               appendToTextField(string: "\(response5 ?? "error-nil")")
+               usleep(30000)
+               let response6 = sendRequest(string: "ramp 254/56/17 0 8s\n", using: client)
+               appendToTextField(string: "\(response6 ?? "error-nil")")
+            }
+            client.close();
+         case .failure(let error):
+            appendToTextField(string: String(describing: error))
+      }
+   }
+}
